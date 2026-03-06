@@ -1,5 +1,7 @@
 use clap::{Parser, Subcommand};
 
+mod metadata;
+
 #[derive(Parser, Debug)]
 #[command(name = "cargo-health")]
 #[command(about = "Cargo Dependency Health Analyzer CLI", long_about = None)]
@@ -33,10 +35,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 println!("Scanning project...");
             }
             
-            // Placeholder: Dependency Extraction & Analysis Phase
+            let dependencies = match metadata::get_project_dependencies() {
+                Ok(deps) => deps,
+                Err(e) => {
+                    eprintln!("Failed to parse Cargo metadata: {}", e);
+                    std::process::exit(1);
+                }
+            };
             
             if !json {
+                println!("Found {} third-party dependencies.", dependencies.len());
                 println!("Analyzing dependencies...");
+                
+                // Temporary output for Phase 2 verification
+                for dep in &dependencies {
+                    println!("- {} v{}", dep.name, dep.version);
+                }
             }
             
             // Placeholder: output matching the goal score bounds.
