@@ -95,3 +95,7 @@ If your project has 10 dependencies:
 - **Calculation:** `(900 + 0) / 10 crates = 90% Overall Health`
 
 If a newer version of a crate is available, it will be highlighted for your convenience, but **no points are deducted** so you don't receive unnecessary penalties for fast-moving ecosystems.
+
+## License
+
+MIT

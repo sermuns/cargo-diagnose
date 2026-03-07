@@ -15,20 +15,21 @@ struct Cli {
 
 #[derive(Subcommand, Debug)]
 enum Commands {
-    /// Support for `cargo diagnose` alias
+    /// Support for `cargo diagnose` alias.
+    /// This is the primary entry point when used as a cargo plugin.
     #[command(name = "diagnose", hide = true)]
     Diagnose(AnalyzeArgs),
-    /// Runs a full dependency audit
+    /// Analyze your project's dependencies for health and security risks.
     Analyze(AnalyzeArgs),
 }
 
 #[derive(clap::Args, Debug, Clone)]
 struct AnalyzeArgs {
-    /// Output result as JSON
+    /// Output the health report result as a JSON object
     #[arg(long)]
     json: bool,
 
-    /// Fail if health score is below threshold
+    /// Fail the command (exit code 1) if the overall health score is below this threshold (0-100)
     #[arg(long)]
     fail_under: Option<u8>,
 }
