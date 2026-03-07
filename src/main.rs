@@ -64,7 +64,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     && let Some(vulns) = osv_res.vulns {
                         for v in vulns {
                             let _summary = v.summary.unwrap_or_else(|| "Unknown".to_string());
-                            report.add_issue(format!("Security - {}", v.id), "Security Risk");
+                            // Penalty: 100 points, Severity: 100 (Highest)
+                            report.add_issue(format!("Security - {}", v.id), "Security Risk", 100, 100);
                         }
                     }
 
@@ -77,6 +78,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 dep.version, crates_res.crate_data.max_version
                             ),
                             "Version Risk",
+                            0, // Penalty: 0 (we don't deduct points for being outdated)
+                            10, // Severity: 10 (Lowest)
                         );
                     }
 
@@ -94,12 +97,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 report.add_issue(
                                     "Repository is Archived".to_string(),
                                     "Maintenance Risk",
+                                    100, // Penalty: 100 (Immediate fail)
+                                    50, // Severity: 50
                                 );
                             } else if stats.stars == 0 && stats.open_issues > 100 {
                                 // Soft heuristic warning
                                 report.add_issue(
                                     "High open issues vs stars".to_string(),
                                     "Maintenance Risk",
+                                    20, // Penalty: 20 points
+                                    30, // Severity: 30
                                 );
                             }
                         }
@@ -116,7 +123,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let overall_health = if total == 0 {
                 100.0
             } else {
-                (healthy as f64 / total as f64) * 100.0
+                let total_score: i32 = reports.iter().map(|r| r.score).sum();
+                (total_score as f64) / (total as f64)
             };
 
             if !json {
@@ -132,6 +140,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 for report in &reports {
                     println!("---------------------------------------------------");
                     println!("{:<13}: {}", "Crate Name", report.name);
+                    println!(
+                        "{:<13}: {}",
+                        "Score",
+                        report.score
+                    );
                     println!(
                         "{:<13}: {}",
                         "Repo",

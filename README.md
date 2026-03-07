@@ -27,20 +27,21 @@ This will print a report showing a score out of 100% for your dependencies:
 Dependency Health Check Report
 ==============================
 
-Overall Health: 88%
+Overall Health: 90%
 Good Crates: 7/8
 Problematic Crates: 1
 
 Details:
 ---------------------------------------------------
 Crate Name   : rustls
+Score        : 20
 Repo         : github.com/rustls/rustls
-Issue        : Outdated version (current: 0.23.37, latest: 0.24.0-dev.0)
-Risk Type    : Version Risk
+Issue        : High open issues vs stars
+Risk Type    : Maintenance Risk
 ...
 ---------------------------------------------------
-Missing / Vulnerable Crates: 12%
-Good / Healthy Crates: 88%
+Missing / Vulnerable Crates: 10%
+Good / Healthy Crates: 90%
 ```
 
 ### JSON Output
@@ -62,13 +63,24 @@ If the overall score is less than `90%`, the command will fail.
 
 ## How the Scoring Works
 
-A dependency is healthy unless:
-1. **Security Risk:** It has a known security problem on OSV.dev.
-2. **Maintenance Risk:** The repository is archived on GitHub, or it has zero stars and many open issues.
-3. **Many Issues:** It has more than 10 issues found by `cargo-doctor`.
+Every project dependency starts with **100 points**. We scan your direct dependencies from `Cargo.toml` using exact lockfile versions. Points are deducted when serious risks are detected:
 
-If a newer version is available, it will be shown in the report. It will not lower your score, so you don't get warnings that are not important.
+1. **Security Vulnerability (-100 points)**: Immediate fail for the crate if a vulnerability is reported on OSV.dev.
+2. **Archived Repository (-100 points)**: Immediate fail if the GitHub repository has been officially archived.
+3. **High Issue Ratio (-20 points)**: Minor penalty if the repository has 0 stars but an alarming number of open issues.
 
+The overall project health score is calculated as the average of all individual crate scores.
+
+**Formula:**
+`Overall Health % = (Sum of all individual crate scores) / (Total number of crates)`
+
+**Example:**
+If your project has 10 dependencies:
+- 9 crates have no issues (100 points each = 900 points)
+- 1 crate has a known security vulnerability (0 points)
+- **Calculation:** `(900 + 0) / 10 crates = 90% Overall Health`
+
+If a newer version of a crate is available, it will be highlighted for your convenience, but **no points are deducted** so you don't receive unnecessary penalties for fast-moving ecosystems.
 ## License
 
 MIT
