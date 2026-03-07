@@ -170,7 +170,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "cargo-doctor"
+name = "cargo-diagnose"
 version = "0.1.0"
 dependencies = [
  "cargo_metadata",

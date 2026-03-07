@@ -21,7 +21,10 @@ pub async fn get_crate_info(
 
     let response = client
         .get(&url)
-        .header("User-Agent", "cargo-doctor (github.com/manaslimem/cargo-doctor)")
+        .header(
+            "User-Agent",
+            "cargo-doctor (github.com/manaslimem/cargo-doctor)",
+        )
         .send()
         .await?;
 
@@ -29,13 +32,13 @@ pub async fn get_crate_info(
         // Crates.io API nests the core data under {"crate": {...}}
         // Because `crate` is a reserved keyword in Rust, the json response must map it.
         // We'll parse the raw string then map it manually or use a wrapper.
-        
+
         #[derive(Deserialize)]
         struct RawResponse {
             #[serde(rename = "crate")]
             inner: CrateData,
         }
-        
+
         let raw: RawResponse = response.json().await?;
         Ok(CratesIoResponse {
             crate_data: raw.inner,

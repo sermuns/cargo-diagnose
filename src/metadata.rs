@@ -13,9 +13,9 @@ pub fn get_project_dependencies() -> Result<Vec<DependencyInfo>, Box<dyn std::er
     let mut dependencies = Vec::new();
 
     let workspace_members = &metadata.workspace_members;
-    
+
     let mut direct_dependency_ids = std::collections::HashSet::new();
-    
+
     if let Some(resolve) = metadata.resolve {
         for node in resolve.nodes {
             if workspace_members.contains(&node.id) {

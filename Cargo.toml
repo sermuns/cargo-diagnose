@@ -1,7 +1,11 @@
 [package]
-name = "cargo-doctor"
+name = "cargo-diagnose"
 version = "0.1.0"
 edition = "2024"
+authors = ["Anas Limem"]
+description = "A command-line dependency health analyzer for Rust projects, scoring OSV vulnerabilities and GitHub maintenance APIs."
+license = "MIT"
+readme = "README.md"
 
 [dependencies]
 cargo_metadata = "0.23.1"

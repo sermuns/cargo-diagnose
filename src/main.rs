@@ -5,7 +5,7 @@ mod metadata;
 mod report;
 
 #[derive(Parser, Debug)]
-#[command(name = "cargo-health")]
+#[command(name = "cargo-diagnose")]
 #[command(about = "Cargo Dependency Health Analyzer CLI", long_about = None)]
 #[command(version)]
 struct Cli {
@@ -40,7 +40,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if !json {
                 println!("Scanning project...");
             }
-            
+
             let dependencies = match metadata::get_project_dependencies() {
                 Ok(deps) => deps,
                 Err(e) => {
@@ -48,86 +48,96 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     std::process::exit(1);
                 }
             };
-            
+
             if !json {
                 println!("Analyzing {} dependencies...", dependencies.len());
             }
 
             let client = reqwest::Client::new();
             let mut reports: Vec<report::CrateReport> = Vec::new();
-            
+
             for dep in &dependencies {
                 let mut report = report::CrateReport::new(dep.name.clone(), None);
 
                 // 1. Query OSV for vulnerabilities
-                match api::osv::check_vulnerabilities(&client, &dep.name, &dep.version).await {
-                    Ok(osv_res) => {
-                        if let Some(vulns) = osv_res.vulns {
-                            for v in vulns {
-                                let summary = v.summary.unwrap_or_else(|| "Unknown".to_string());
-                                report.add_issue(format!("Security - {}", v.id), "Security Risk");
-                            }
+                if let Ok(osv_res) = api::osv::check_vulnerabilities(&client, &dep.name, &dep.version).await
+                    && let Some(vulns) = osv_res.vulns {
+                        for v in vulns {
+                            let _summary = v.summary.unwrap_or_else(|| "Unknown".to_string());
+                            report.add_issue(format!("Security - {}", v.id), "Security Risk");
                         }
                     }
-                    Err(_) => {}
-                }
 
                 // 2. Query Crates.io for latest version / metadata
-                match api::crates_io::get_crate_info(&client, &dep.name).await {
-                    Ok(crates_res) => {
-                        if crates_res.crate_data.max_version != dep.version {
-                            report.add_issue(
-                                format!("Outdated version (current: {}, latest: {})", dep.version, crates_res.crate_data.max_version),
-                                "Version Risk"
-                            );
-                        }
-                        
-                        if let Some(repo_url) = crates_res.crate_data.repository {
-                            // Trim https:// and www. for clean printing
-                            let clean_repo = repo_url
-                                .replace("https://", "")
-                                .replace("http://", "")
-                                .replace("www.", "");
-                            report.repo = Some(clean_repo);
-                            
-                            // 3. Query GitHub if it's a github repo
-                            if let Ok(Some(stats)) = api::github::get_repo_stats(&repo_url).await {
-                                if stats.is_archived {
-                                    report.add_issue("Repository is Archived".to_string(), "Maintenance Risk");
-                                } else if stats.stars == 0 && stats.open_issues > 100 {
-                                    // Soft heuristic warning
-                                    report.add_issue("High open issues vs stars".to_string(), "Maintenance Risk");
-                                }
+                if let Ok(crates_res) = api::crates_io::get_crate_info(&client, &dep.name).await {
+                    if crates_res.crate_data.max_version != dep.version {
+                        report.add_issue(
+                            format!(
+                                "Outdated version (current: {}, latest: {})",
+                                dep.version, crates_res.crate_data.max_version
+                            ),
+                            "Version Risk",
+                        );
+                    }
+
+                    if let Some(repo_url) = crates_res.crate_data.repository {
+                        // Trim https:// and www. for clean printing
+                        let clean_repo = repo_url
+                            .replace("https://", "")
+                            .replace("http://", "")
+                            .replace("www.", "");
+                        report.repo = Some(clean_repo);
+
+                        // 3. Query GitHub if it's a github repo
+                        if let Ok(Some(stats)) = api::github::get_repo_stats(&repo_url).await {
+                            if stats.is_archived {
+                                report.add_issue(
+                                    "Repository is Archived".to_string(),
+                                    "Maintenance Risk",
+                                );
+                            } else if stats.stars == 0 && stats.open_issues > 100 {
+                                // Soft heuristic warning
+                                report.add_issue(
+                                    "High open issues vs stars".to_string(),
+                                    "Maintenance Risk",
+                                );
                             }
                         }
                     }
-                    Err(_) => {}
                 }
 
                 reports.push(report);
             }
-            
+
             let total = reports.len();
             let healthy: usize = reports.iter().filter(|r| r.is_healthy()).count();
             let problematic = total - healthy;
-            
-            let overall_health = if total == 0 { 100.0 } else { (healthy as f64 / total as f64) * 100.0 };
-            
+
+            let overall_health = if total == 0 {
+                100.0
+            } else {
+                (healthy as f64 / total as f64) * 100.0
+            };
+
             if !json {
                 println!("\nDependency Health Check Report");
                 println!("==============================");
-                println!("");
+                println!();
                 println!("Overall Health: {:.0}%", overall_health);
                 println!("Good Crates: {}/{}", healthy, total);
                 println!("Problematic Crates: {}", problematic);
-                println!("");
+                println!();
                 println!("Details:");
-                
+
                 for report in &reports {
                     println!("---------------------------------------------------");
                     println!("{:<13}: {}", "Crate Name", report.name);
-                    println!("{:<13}: {}", "Repo", report.repo.as_deref().unwrap_or("Unknown"));
-                    
+                    println!(
+                        "{:<13}: {}",
+                        "Repo",
+                        report.repo.as_deref().unwrap_or("Unknown")
+                    );
+
                     if report.issues.is_empty() {
                         println!("{:<13}: None", "Issue");
                         println!("{:<13}: OK", "Risk Type");
@@ -138,7 +148,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 }
                 println!("---------------------------------------------------");
-                println!("Missing / Vulnerable Crates: {:.0}%", 100.0 - overall_health);
+                println!(
+                    "Missing / Vulnerable Crates: {:.0}%",
+                    100.0 - overall_health
+                );
                 println!("Good / Healthy Crates: {:.0}%", overall_health);
             } else {
                 // If json mode is enabled
@@ -148,19 +161,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     "problematic_crates": problematic,
                     "total": total
                 });
-                println!("{}", json_output.to_string());
+                println!("{}", json_output);
             }
 
-            if let Some(threshold) = fail_under {
-                if (overall_health as u8) < threshold {
+            if let Some(threshold) = fail_under
+                && (overall_health as u8) < threshold {
                     if !json {
-                        eprintln!("\nHealth score {:.0}% is below threshold of {}%.", overall_health, threshold);
+                        eprintln!(
+                            "\nHealth score {:.0}% is below threshold of {}%.",
+                            overall_health, threshold
+                        );
                     }
                     std::process::exit(1);
                 }
-            }
         }
     }
-    
+
     Ok(())
 }

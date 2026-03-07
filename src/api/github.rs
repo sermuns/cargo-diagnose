@@ -1,4 +1,4 @@
-use octocrab::{models::Repository, Octocrab};
+use octocrab::Octocrab;
 
 #[derive(Debug)]
 pub struct GithubRepoStats {
@@ -30,11 +30,11 @@ pub async fn get_repo_stats(
     let owner = path_parts[0];
     let repo = path_parts[1];
 
-    // Build octocrab client. 
+    // Build octocrab client.
     // In a real app we'd reuse this client and accept a GITHUB_TOKEN to avoid rate limits,
     // but for the MVP, the unauthenticated client works for small limits.
     let octocrab = Octocrab::builder().build()?;
-    
+
     // Attempt to fetch repo
     match octocrab.repos(owner, repo).get().await {
         Ok(repo_stats) => Ok(Some(GithubRepoStats {
