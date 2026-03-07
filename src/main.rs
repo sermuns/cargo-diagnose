@@ -80,7 +80,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         for v in vulns {
                             report.add_issue(
                                 format!("Security - {}", v.id),
-                                "Security Risk",
+                                report::RiskType::SecurityRisk,
                                 100,
                                 100,
                             );
@@ -96,7 +96,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                     "Outdated version (current: {}, latest: {})",
                                     dep.version, crates_res.crate_data.max_version
                                 ),
-                                "Version Risk",
+                                report::RiskType::VersionRisk,
                                 0,
                                 10,
                             );
@@ -116,14 +116,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 if stats.is_archived {
                                     report.add_issue(
                                         "Repository is Archived".to_string(),
-                                        "Maintenance Risk",
+                                        report::RiskType::MaintenanceRisk,
                                         100,
                                         50,
                                     );
                                 } else if stats.stars == 0 && stats.open_issues > 100 {
                                     report.add_issue(
                                         "High open issues vs stars".to_string(),
-                                        "Maintenance Risk",
+                                        report::RiskType::MaintenanceRisk,
                                         20,
                                         30,
                                     );
