@@ -23,7 +23,7 @@ where
             Err(err) if attempts < max_attempts => {
                 let jitter = rand::random::<f64>() * 0.5 + 0.75; // 0.75 to 1.25
                 let sleep_duration = backoff.mul_f64(jitter);
-                
+
                 eprintln!(
                     "Attempt {} failed: {}. Retrying in {:?}...",
                     attempts, err, sleep_duration

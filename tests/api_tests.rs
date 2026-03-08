@@ -35,7 +35,11 @@ async fn test_retry_eventual_success() {
             async move {
                 let mut c = count_inner.lock().await;
                 *c += 1;
-                if *c < 3 { Err("fail".to_string()) } else { Ok(42) }
+                if *c < 3 {
+                    Err("fail".to_string())
+                } else {
+                    Ok(42)
+                }
             }
         },
         3,
